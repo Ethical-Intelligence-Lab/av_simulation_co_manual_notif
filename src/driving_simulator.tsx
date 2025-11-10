@@ -6,7 +6,7 @@ declare const Qualtrics: any;
 const AUTOPILOT_BLIND_DISTANCE = 1000; // Units before the finish where autopilot goes blind
 const TRACK_LENGTH = 8000; // Total distance from start to finish line in world units
 const MANUAL_MAX_VELOCITY = 0.625; // 75 MPH for manual driving (carVelocity units)
-const labelCondition = 'Autopilot';
+const labelCondition = 'Copilot';
 
 interface ModeBySecond {
   second: number;
