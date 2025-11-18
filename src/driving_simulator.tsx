@@ -16,7 +16,7 @@ const labelCondition = 'Copilot';
 const NOTIFICATION_1_TIME = 8;  // First notification at 8 seconds
 const NOTIFICATION_2_TIME = 20; // Second notification at 20 seconds
 const NOTIFICATION_3_TIME = 32; // Third notification at 32 seconds
-const NOTIFICATION_DURATION = 3; // How long each notification stays visible (seconds)
+const NOTIFICATION_DURATION = 5; // How long each notification stays visible (seconds)
 
 interface ModeBySecond {
   second: number;
@@ -70,7 +70,7 @@ const DrivingSimulator = () => {
   const [autopilotPending, setAutopilotPending] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
-  const [score, setScore] = useState(1000);
+  const [score, setScore] = useState(500);
   const [scoreFlash, setScoreFlash] = useState(false);
   const [showInstructions, setShowInstructions] = useState(true);
   const [gameStarted, setGameStarted] = useState(false);
@@ -84,7 +84,7 @@ const DrivingSimulator = () => {
   const autopilotRef = useRef(false);
   const autopilotPendingRef = useRef(false);
   const progressRef = useRef(0);
-  const scoreRef = useRef(1000);
+  const scoreRef = useRef(500);
   const failureLaneHitsRef = useRef(0);
   const lastDistanceUnitLoggedRef = useRef(-1);
   const blindLaneStateRef = useRef<{ index: number | null; prepopulated: boolean }>({
@@ -138,8 +138,8 @@ const DrivingSimulator = () => {
           gameStartedRef.current = true;
           setGameStarted(true);
           startTimeRef.current = Date.now();
-          scoreRef.current = 1000;
-          setScore(1000);
+          scoreRef.current = 500;
+          setScore(500);
           if (countdownIntervalRef.current) {
             clearInterval(countdownIntervalRef.current);
           }
@@ -362,7 +362,7 @@ const DrivingSimulator = () => {
     // No keyboard controls - always in Copilot mode
 
     // Timer - only start when game begins
-    let lastScoreDeduction = 0;
+    // let lastScoreDeduction = 0; // Time-based score deduction removed
     let lastSecondLogged = -1;
     
     const ensureModeByUnitComplete = () => {
@@ -444,15 +444,16 @@ const DrivingSimulator = () => {
         lastSecondLogged = elapsed;
       }
       
-      const now = Date.now();
-      if (lastScoreDeduction === 0) {
-        lastScoreDeduction = now;
-      }
-      if (now - lastScoreDeduction >= 1000) {
-        scoreRef.current = Math.max(0, scoreRef.current - 5);
-        setScore(scoreRef.current);
-        lastScoreDeduction = now;
-      }
+      // Time-based score deduction removed - can be restored later if needed
+      // const now = Date.now();
+      // if (lastScoreDeduction === 0) {
+      //   lastScoreDeduction = now;
+      // }
+      // if (now - lastScoreDeduction >= 1000) {
+      //   scoreRef.current = Math.max(0, scoreRef.current - 5);
+      //   setScore(scoreRef.current);
+      //   lastScoreDeduction = now;
+      // }
       
       // Check for completion at 45 seconds
       if (elapsed >= 45 && !finishLineCrossed) {
@@ -602,7 +603,8 @@ const DrivingSimulator = () => {
       // Finish burst spawning removed - finish line removed
 
       // Always in Copilot mode - no manual control
-      if (elapsed >= 0) {
+      // Stop autopilot control after completion (coasting/stopping phase)
+      if (elapsed >= 0 && !finishLineCrossed) {
         autopilotRef.current = true;
         wasAutopilot = true;
         const previousAutopilotTimer = autopilotTimer;
@@ -799,9 +801,7 @@ const DrivingSimulator = () => {
               type: 'traffic'
             });
             
-            if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
-            setScoreFlash(true);
-            flashTimeoutRef.current = window.setTimeout(() => setScoreFlash(false), 300);
+            // No visual feedback - score flash removed
             
             collisionCooldown.set(index, frameCount);
           }
@@ -869,13 +869,15 @@ const DrivingSimulator = () => {
       // Check finish line crossing - removed (finish line removed, completion based on timer only)
       // Completion is now handled in the timer interval at 45 seconds
       
-      // Stop car logic removed - finish line removed
-      // if (finishLineCrossed && finishLineCrossTime) {
-      //   const timeSinceFinish = (Date.now() - finishLineCrossTime) / 1000;
-      //   if (timeSinceFinish >= 5) {
-      //     carVelocity = 0;
-      //   }
-      // }
+      // Coasting behavior: coast for 5 seconds, then gradually slow to stop
+      if (finishLineCrossed && finishLineCrossTime) {
+        const timeSinceFinish = (Date.now() - finishLineCrossTime) / 1000;
+        if (timeSinceFinish >= 5) {
+          // Gradually slow down after 5 seconds of coasting
+          carVelocity = Math.max(0, carVelocity - 0.02 * scaledDelta);
+        }
+        // Otherwise, maintain current speed (coasting)
+      }
 
       renderer.render(scene, camera);
     };
@@ -951,19 +953,16 @@ const DrivingSimulator = () => {
             lineHeight: '1.6'
           }}>
             <h1 style={{ fontSize: '36px', marginBottom: '30px', color: '#ffd700' }}>
-              🚗 {labelCondition} Simulation 🚗
+              🚗 AEON {labelCondition} Simulation 🚗
             </h1>
-            <div style={{ fontSize: '20px', marginBottom: '20px', fontWeight: 'bold' }}>
-              Watch the Simulation:
-            </div>
             <p style={{ marginBottom: '15px' }}>
-              You are about to watch a <strong>{labelCondition} simulation</strong>. The vehicle will drive autonomously using {labelCondition.toLowerCase()} technology. <strong>You do not need to interact with the simulation</strong>—simply observe how the {labelCondition.toLowerCase()} handles the driving.
+              You are about to watch a <strong>driving simulation</strong>. <br></br>The vehicle will drive autonomously using AEON's {labelCondition} technology. <strong><br></br>You do not need to interact with the simulation</strong> — simply observe how {labelCondition} handles the driving.
             </p>
             <p style={{ marginBottom: '15px' }}>
-              The simulation will last <strong>45 seconds</strong>. During this time, you may see notifications appear on screen—these represent typical smartphone notifications that might appear while the {labelCondition.toLowerCase()} is driving.
+              The simulation will last <strong>45 seconds</strong>. During this time, you may see <strong>notifications</strong> appear on screen—these represent typical smartphone notifications that might appear while {labelCondition} is driving.
             </p>
-            <p style={{ marginBottom: '15px', color: '#99ff99' }}>
-              💰 You will receive a bonus of <strong>$0.50</strong> for watching the whole simulation.
+            <p style={{ marginBottom: '15px' }}>
+              Your score starts at <strong>500 points</strong> and decreases by <strong>10 points</strong> for each obstacle the vehicle hits. The score is displayed in the top right during the simulation.
             </p>
             <button
               onClick={startGame}
@@ -1024,20 +1023,17 @@ const DrivingSimulator = () => {
             }}>
               {speed} MPH
             </div>
-            {/* Score display removed - still tracking in background
             <div style={{
-              background: scoreFlash ? '#ff0000' : 'rgba(0, 0, 0, 0.65)',
-              color: scoreFlash ? 'white' : (score > 500 ? '#44ff44' : score > 250 ? '#ffaa44' : '#ff4444'),
+              background: 'rgba(0, 0, 0, 0.65)',
+              color: (score > 250 ? '#44ff44' : score > 125 ? '#ffaa44' : '#ff4444'),
               padding: '10px 20px',
               borderRadius: '8px',
               fontSize: '20px',
               fontFamily: 'monospace',
-              fontWeight: 'bold',
-              transition: 'background 0.1s, color 0.1s'
+              fontWeight: 'bold'
             }}>
               Score: {score}
             </div>
-            */}
           </div>
           {/* Progress bar removed
           <div style={{
@@ -1122,12 +1118,13 @@ const DrivingSimulator = () => {
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          width: '90%',
-          maxWidth: '600px',
+          width: '95%',
+          maxWidth: '700px',
+          minHeight: '200px',
           background: 'rgba(0, 0, 0, 0.85)',
           backdropFilter: 'blur(10px)',
           borderRadius: '20px',
-          padding: '40px',
+          padding: '50px',
           zIndex: 2000,
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
           border: '2px solid rgba(255, 255, 255, 0.2)',
@@ -1136,21 +1133,21 @@ const DrivingSimulator = () => {
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            marginBottom: '15px',
-            gap: '12px'
+            marginBottom: '20px',
+            gap: '16px'
           }}>
-            <div style={{ fontSize: '32px' }}>{activeNotification.icon}</div>
+            <div style={{ fontSize: '48px' }}>{activeNotification.icon}</div>
             <div>
               <div style={{
-                fontSize: '18px',
+                fontSize: '24px',
                 fontWeight: 'bold',
                 color: '#ffffff',
-                marginBottom: '4px'
+                marginBottom: '6px'
               }}>
                 {activeNotification.title}
               </div>
               <div style={{
-                fontSize: '12px',
+                fontSize: '14px',
                 color: 'rgba(255, 255, 255, 0.6)'
               }}>
                 {activeNotification.type === 'text' ? 'Text Message' : 
@@ -1160,17 +1157,17 @@ const DrivingSimulator = () => {
             </div>
           </div>
           <div style={{
-            fontSize: '16px',
+            fontSize: '20px',
             color: 'rgba(255, 255, 255, 0.9)',
-            lineHeight: '1.5'
+            lineHeight: '1.6'
           }}>
             {activeNotification.content}
           </div>
           <div style={{
             position: 'absolute',
-            top: '10px',
-            right: '10px',
-            fontSize: '20px',
+            top: '15px',
+            right: '15px',
+            fontSize: '28px',
             color: 'rgba(255, 255, 255, 0.5)',
             cursor: 'default'
           }}>
@@ -1208,7 +1205,10 @@ const DrivingSimulator = () => {
           fontWeight: 'bold'
         }}>
           ✅ Simulation Complete! ✅
-          <div style={{ fontSize: '18px', marginTop: '20px', color: '#ffaa44' }}>
+          <div style={{ fontSize: '24px', marginTop: '20px' }}>
+            Final Score: {score}
+          </div>
+          <div style={{ fontSize: '18px', marginTop: '15px', color: '#ffaa44' }}>
             Blocks Hit: {simulationDataRef.current.whiteBlocksHit}
           </div>
           <div style={{ fontSize: '14px', marginTop: '10px', color: '#aaaaaa' }}>
