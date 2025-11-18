@@ -12,6 +12,12 @@ const CAR_UNITS_TO_MPH = AUTOPILOT_MAX_MPH / AUTOPILOT_SPEED_UNITS;
 const MANUAL_MAX_VELOCITY = MANUAL_MAX_MPH / CAR_UNITS_TO_MPH;
 const labelCondition = 'Copilot';
 
+// Notification timing (in seconds) - configurable
+const NOTIFICATION_1_TIME = 8;  // First notification at 8 seconds
+const NOTIFICATION_2_TIME = 20; // Second notification at 20 seconds
+const NOTIFICATION_3_TIME = 32; // Third notification at 32 seconds
+const NOTIFICATION_DURATION = 3; // How long each notification stays visible (seconds)
+
 interface ModeBySecond {
   second: number;
   mode: string;
@@ -49,9 +55,18 @@ interface CollisionEvent {
   isBlindLane?: boolean;
 }
 
+interface Notification {
+  id: number;
+  type: 'text' | 'news' | 'social';
+  title: string;
+  content: string;
+  icon?: string;
+  timestamp: number;
+}
+
 const DrivingSimulator = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [isAutopilot, setIsAutopilot] = useState(false);
+  const [isAutopilot, setIsAutopilot] = useState(true); // Always in Copilot mode
   const [autopilotPending, setAutopilotPending] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
@@ -62,6 +77,7 @@ const DrivingSimulator = () => {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [speed, setSpeed] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [activeNotification, setActiveNotification] = useState<Notification | null>(null);
   const isCompleteRef = useRef(false);
   const gameStartedRef = useRef(false);
   const startTimeRef = useRef<number | null>(null);
@@ -89,13 +105,14 @@ const DrivingSimulator = () => {
   const startGame = () => {
     setShowInstructions(false);
     setCountdown(3);
-    setIsAutopilot(false);
-    autopilotRef.current = false;
+    setIsAutopilot(true); // Always start in Copilot mode
+    autopilotRef.current = true;
     autopilotPendingRef.current = false;
     setAutopilotPending(false);
     progressRef.current = 0;
     setProgress(0);
     setElapsedTime(0);
+    setActiveNotification(null);
     failureLaneHitsRef.current = 0;
     lastDistanceUnitLoggedRef.current = -1;
     blindLaneStateRef.current = { index: null, prepopulated: false };
@@ -131,24 +148,14 @@ const DrivingSimulator = () => {
     }, 1000);
   };
 
-  const handleToggleAutopilot = () => {
-    if (isAutopilot || autopilotPendingRef.current) {
-      setIsAutopilot(false);
-      autopilotRef.current = false;
-      autopilotPendingRef.current = false;
-      setAutopilotPending(false);
-    } else {
-      autopilotPendingRef.current = true;
-      setAutopilotPending(true);
-    }
-  };
+  // No toggle function needed - always in Copilot mode
 
   const blindProgressThreshold = 1 - (AUTOPILOT_BLIND_DISTANCE / TRACK_LENGTH);
   const inBlindZone = progress >= blindProgressThreshold;
 
   useEffect(() => {
-    autopilotRef.current = isAutopilot;
-  }, [isAutopilot]);
+    autopilotRef.current = true; // Always in Copilot mode
+  }, []);
 
   useEffect(() => {
     isCompleteRef.current = isComplete;
@@ -323,24 +330,24 @@ const DrivingSimulator = () => {
       otherCars.push(otherCar);
     });
 
-    // White blocks - spawn throughout the game
+    // White blocks - spawn throughout the game (reduced spawn rate for perfect avoidance)
     const finalBlocks: THREE.Mesh[] = [];
-    const baseBlockSpawnDistance = 140; // Units travelled between regular spawns early in the race
-    const lateBlockSpawnDistance = 70;   // Units between late-race spawns as density rises
-    const finishBurstSpawnDistance = 30; // Units between finish-line bursts
+    const baseBlockSpawnDistance = 200; // Units travelled between regular spawns early in the race (increased for less aggressive spawning)
+    const lateBlockSpawnDistance = 100;   // Units between late-race spawns as density rises
+    const finishBurstSpawnDistance = 50; // Units between finish-line bursts
     let lastBlockSpawnZ = carGroup.position.z;
     let lastLateBlockSpawnZ = carGroup.position.z;
     let lastFinishBurstSpawnZ = carGroup.position.z;
 
-    // Finish line (static)
-    const finishLineZ = -TRACK_LENGTH;
-    const finishLine = new THREE.Mesh(
-      new THREE.PlaneGeometry(8, 2),
-      new THREE.MeshBasicMaterial({ color: 0xffff00 })
-    );
-    finishLine.rotation.x = -Math.PI / 2;
-    finishLine.position.set(0, 0.03, finishLineZ);
-    scene.add(finishLine);
+    // Finish line (static) - commented out
+    // const finishLineZ = -TRACK_LENGTH;
+    // const finishLine = new THREE.Mesh(
+    //   new THREE.PlaneGeometry(8, 2),
+    //   new THREE.MeshBasicMaterial({ color: 0xffff00 })
+    // );
+    // finishLine.rotation.x = -Math.PI / 2;
+    // finishLine.position.set(0, 0.03, finishLineZ);
+    // scene.add(finishLine);
 
     // Game state
     let carVelocity = 0;
@@ -352,29 +359,7 @@ const DrivingSimulator = () => {
     let finishLineCrossed = false;
     let finishLineCrossTime: number | null = null;
     
-    const keys: Keys = {
-      ArrowUp: false,
-      ArrowDown: false,
-      ArrowLeft: false,
-      ArrowRight: false
-    };
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const key = e.key;
-      if (key in keys) {
-        keys[key] = true;
-      }
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      const key = e.key;
-      if (key in keys) {
-        keys[key] = false;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    // No keyboard controls - always in Copilot mode
 
     // Timer - only start when game begins
     let lastScoreDeduction = 0;
@@ -382,12 +367,16 @@ const DrivingSimulator = () => {
     
     const ensureModeByUnitComplete = () => {
       if (lastDistanceUnitLoggedRef.current >= TRACK_LENGTH) return;
-      const modeLabel = autopilotRef.current ? labelCondition.toLowerCase() : 'manual';
+      const modeLabel = labelCondition.toLowerCase(); // Always copilot
       for (let unit = lastDistanceUnitLoggedRef.current + 1; unit <= TRACK_LENGTH; unit++) {
         simulationDataRef.current.modeByUnit[unit] = modeLabel;
       }
       lastDistanceUnitLoggedRef.current = TRACK_LENGTH;
     };
+    
+    // Track which notifications have been shown
+    const notificationsShown = new Set<number>();
+    const notificationStartTimes = new Map<number, number>();
     
     const timerInterval = setInterval(() => {
       if (!startTimeRef.current || !gameStartedRef.current || isCompleteRef.current) return;
@@ -395,11 +384,62 @@ const DrivingSimulator = () => {
       const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
       setElapsedTime(elapsed);
       
+      // Check for notification triggers
+      const notificationTimes = [NOTIFICATION_1_TIME, NOTIFICATION_2_TIME, NOTIFICATION_3_TIME];
+      notificationTimes.forEach((notifTime, index) => {
+        if (elapsed === notifTime && !notificationsShown.has(index)) {
+          notificationsShown.add(index);
+          const notifId = index + 1;
+          
+          let notification: Notification;
+          if (notifId === 1) {
+            // Text message
+            notification = {
+              id: notifId,
+              type: 'text',
+              title: 'Sarah',
+              content: 'Hey! Are we still on for dinner tonight?',
+              icon: '💬',
+              timestamp: Date.now()
+            };
+          } else if (notifId === 2) {
+            // News article
+            notification = {
+              id: notifId,
+              type: 'news',
+              title: 'Breaking News',
+              content: 'Tech stocks surge as AI adoption accelerates across industries',
+              icon: '📰',
+              timestamp: Date.now()
+            };
+          } else {
+            // Social media
+            notification = {
+              id: notifId,
+              type: 'social',
+              title: 'Instagram',
+              content: 'You have 5 new posts from people you follow',
+              icon: '📸',
+              timestamp: Date.now()
+            };
+          }
+          
+          setActiveNotification(notification);
+          notificationStartTimes.set(notifId, Date.now());
+          
+          // Auto-dismiss after duration
+          setTimeout(() => {
+            setActiveNotification(null);
+            notificationStartTimes.delete(notifId);
+          }, NOTIFICATION_DURATION * 1000);
+        }
+      });
+      
       // Log mode at each second
       if (elapsed !== lastSecondLogged) {
         simulationDataRef.current.modeBySecond.push({
           second: elapsed,
-          mode: autopilotRef.current ? labelCondition.toLowerCase() : 'manual'
+          mode: labelCondition.toLowerCase() // Always copilot
         });
         lastSecondLogged = elapsed;
       }
@@ -412,6 +452,36 @@ const DrivingSimulator = () => {
         scoreRef.current = Math.max(0, scoreRef.current - 5);
         setScore(scoreRef.current);
         lastScoreDeduction = now;
+      }
+      
+      // Check for completion at 45 seconds
+      if (elapsed >= 45 && !finishLineCrossed) {
+        finishLineCrossed = true;
+        finishLineCrossTime = Date.now();
+        simulationDataRef.current.finalScore = scoreRef.current;
+        setIsComplete(true);
+        clearInterval(timerInterval);
+        
+        // Remove all blocks immediately
+        finalBlocks.forEach(block => {
+          scene.remove(block);
+        });
+        finalBlocks.length = 0;
+        
+        // Log final data to console
+        console.log('=== SIMULATION DATA ===');
+        console.log('Mode by second:', simulationDataRef.current.modeBySecond);
+        console.log('White blocks hit:', simulationDataRef.current.whiteBlocksHit);
+        console.log('Final score:', simulationDataRef.current.finalScore);
+        console.log('======================');
+        
+        // Save data to Qualtrics if available
+        if (typeof Qualtrics !== 'undefined') {
+          Qualtrics.SurveyEngine.setEmbeddedData('sim_mode_by_second', JSON.stringify(simulationDataRef.current.modeBySecond));
+          Qualtrics.SurveyEngine.setEmbeddedData('sim_white_blocks_hit', simulationDataRef.current.whiteBlocksHit);
+          Qualtrics.SurveyEngine.setEmbeddedData('sim_final_score', simulationDataRef.current.finalScore);
+          console.log('Data saved to Qualtrics embedded data');
+        }
       }
     }, 100);
 
@@ -481,7 +551,7 @@ const DrivingSimulator = () => {
       const trackLength = TRACK_LENGTH;
       const progressRatio = Math.min(distanceTravelled / trackLength, 1);
       const densityLevel = Math.min(Math.floor(progressRatio * 10), 10);
-      const distanceToFinish = carGroup.position.z - finishLineZ;
+      // const distanceToFinish = carGroup.position.z - finishLineZ; // Finish line removed
 
       if (Math.abs(progressRatio - progressRef.current) > 0.005) {
         progressRef.current = progressRatio;
@@ -497,200 +567,55 @@ const DrivingSimulator = () => {
         lastDistanceUnitLoggedRef.current = currentDistanceUnit;
       }
 
-      if (!finishLineCrossed && distanceToFinish > 0 && distanceToFinish <= AUTOPILOT_BLIND_DISTANCE && elapsed >= 0) {
-        if (blindLaneStateRef.current.index === null) {
-          const laneOptions = [0, 1, 2].filter(lane => lane !== currentLaneIndex);
-          blindLaneStateRef.current.index = laneOptions.length > 0
-            ? laneOptions[Math.floor(Math.random() * laneOptions.length)]
-            : currentLaneIndex;
-        }
+      // Blind zone logic removed - finish line removed
+      // if (!finishLineCrossed && distanceToFinish > 0 && distanceToFinish <= AUTOPILOT_BLIND_DISTANCE && elapsed >= 0) {
+      //   ... (blind zone block spawning logic)
+      // }
 
-        if (!blindLaneStateRef.current.prepopulated && blindLaneStateRef.current.index !== null) {
-          blindLaneStateRef.current.prepopulated = true;
-          const blindLaneIndex = blindLaneStateRef.current.index;
-
-          for (let i = finalBlocks.length - 1; i >= 0; i--) {
-            const block = finalBlocks[i];
-            const sameLane = Math.abs(block.position.x - lanes[blindLaneIndex]) < 0.1;
-            const withinBlindStretch = block.position.z <= carGroup.position.z + 5 && block.position.z >= finishLineZ - 10;
-
-            if (withinBlindStretch) {
-              if (!sameLane) {
-                scene.remove(block);
-                finalBlocks.splice(i, 1);
-                continue;
-              }
-              if (sameLane && block.position.z < carGroup.position.z) {
-                scene.remove(block);
-                finalBlocks.splice(i, 1);
-                continue;
-              }
-            }
-          }
-
-          otherCars.forEach((traffic, index) => {
-            if (traffic.position.z <= carGroup.position.z + 5 && traffic.position.z >= finishLineZ - 10) {
-              traffic.position.z = finishLineZ - 150 - index * 40;
-            }
-          });
-
-          let nextZ = carGroup.position.z - 40;
-          while (nextZ > finishLineZ - 10) {
-            const block = new THREE.Mesh(
-              new THREE.BoxGeometry(2, 2, 4),
-              new THREE.MeshStandardMaterial({ 
-                color: 0xffffff,
-                metalness: 0.5,
-                roughness: 0.5,
-                emissive: 0xffffff,
-                emissiveIntensity: 0.45
-              })
-            );
-            block.position.set(lanes[blindLaneIndex], 1, nextZ);
-            block.castShadow = true;
-            block.userData.isFinalBlock = true;
-            block.userData.isBlindLane = true;
-            scene.add(block);
-            finalBlocks.push(block);
-            nextZ -= 12;
-          }
-        }
-      }
-
+      // Block spawning - simplified without finish line logic
       if (!finishLineCrossed && elapsed >= 0) {
-        if (distanceToFinish > AUTOPILOT_BLIND_DISTANCE) {
-          const distanceSinceLastSpawn = Math.abs(carGroup.position.z - lastBlockSpawnZ);
-          const dynamicInterval = Math.max(55, baseBlockSpawnDistance - densityLevel * 7);
-          if (distanceTravelled > 80 && distanceSinceLastSpawn >= dynamicInterval) {
-            lastBlockSpawnZ = carGroup.position.z;
-            const spawnDistance = 80;
-            const laneIndex = Math.floor(Math.random() * lanes.length);
-            const block = new THREE.Mesh(
-              new THREE.BoxGeometry(2, 2, 4),
-              new THREE.MeshStandardMaterial({ 
-                color: 0xffffff,
-                metalness: 0.5,
-                roughness: 0.5,
-                emissive: 0xffffff,
-                emissiveIntensity: 0.3
-              })
-            );
-            const offset = 3 + (Math.random() * 4);
-            block.position.set(lanes[laneIndex], 1, carGroup.position.z - spawnDistance - offset);
-            block.castShadow = true;
-            block.userData.isFinalBlock = true;
-            scene.add(block);
-            finalBlocks.push(block);
-          }
-        }
-
-        if (distanceToFinish <= AUTOPILOT_BLIND_DISTANCE && distanceToFinish > 300) {
-          const distanceSinceLastLateSpawn = Math.abs(carGroup.position.z - lastLateBlockSpawnZ);
-          const dynamicLateInterval = Math.max(35, lateBlockSpawnDistance - densityLevel * 4);
-          if (distanceSinceLastLateSpawn >= dynamicLateInterval) {
-            lastLateBlockSpawnZ = carGroup.position.z;
-            const spawnDistance = 70;
-            const possibleLanes = blindLaneStateRef.current.index !== null && blindLaneStateRef.current.prepopulated
-              ? []
-              : [0, 1, 2];
-
-            if (possibleLanes.length > 0) {
-              const laneIndex = Math.floor(Math.random() * possibleLanes.length);
-              const block = new THREE.Mesh(
-                new THREE.BoxGeometry(2, 2, 4),
-                new THREE.MeshStandardMaterial({ 
-                  color: 0xffffff,
-                  metalness: 0.5,
-                  roughness: 0.5,
-                  emissive: 0xffffff,
-                  emissiveIntensity: 0.35
-                })
-              );
-              const offset = 3.5 + (Math.random() * 3.5);
-              block.position.set(possibleLanes[laneIndex], 1, carGroup.position.z - spawnDistance - offset);
-              block.castShadow = true;
-              block.userData.isFinalBlock = true;
-              scene.add(block);
-              finalBlocks.push(block);
-            }
-          }
+        const distanceSinceLastSpawn = Math.abs(carGroup.position.z - lastBlockSpawnZ);
+        const dynamicInterval = Math.max(55, baseBlockSpawnDistance - densityLevel * 7);
+        if (distanceTravelled > 80 && distanceSinceLastSpawn >= dynamicInterval) {
+          lastBlockSpawnZ = carGroup.position.z;
+          const spawnDistance = 80;
+          const laneIndex = Math.floor(Math.random() * lanes.length);
+          const block = new THREE.Mesh(
+            new THREE.BoxGeometry(2, 2, 4),
+            new THREE.MeshStandardMaterial({ 
+              color: 0xffffff,
+              metalness: 0.5,
+              roughness: 0.5,
+              emissive: 0xffffff,
+              emissiveIntensity: 0.3
+            })
+          );
+          const offset = 3 + (Math.random() * 4);
+          block.position.set(lanes[laneIndex], 1, carGroup.position.z - spawnDistance - offset);
+          block.castShadow = true;
+          block.userData.isFinalBlock = true;
+          scene.add(block);
+          finalBlocks.push(block);
         }
       }
 
-      if (!finishLineCrossed && distanceToFinish > 0 && distanceToFinish < 300 && elapsed >= 0) {
-        const distanceSinceLastBurst = Math.abs(carGroup.position.z - lastFinishBurstSpawnZ);
-        const dynamicBurstInterval = Math.max(35, finishBurstSpawnDistance - densityLevel * 1.8);
-        if (distanceSinceLastBurst >= dynamicBurstInterval) {
-          lastFinishBurstSpawnZ = carGroup.position.z;
-          const spawnDistance = 60;
+      // Finish burst spawning removed - finish line removed
 
-          const availableLanes = blindLaneStateRef.current.index !== null && blindLaneStateRef.current.prepopulated
-            ? []
-            : [0, 1, 2];
-
-          if (availableLanes.length > 0) {
-            const lanesToSpawn = [];
-            const numLanesToSpawn = Math.random() < 0.2
-              ? Math.min(2, availableLanes.length)
-              : 1;
-            const shuffledLanes = availableLanes.sort(() => Math.random() - 0.5);
-
-            for (let i = 0; i < numLanesToSpawn; i++) {
-              lanesToSpawn.push(shuffledLanes[i]);
-            }
-
-            lanesToSpawn.forEach((laneIndex) => {
-              const block = new THREE.Mesh(
-                new THREE.BoxGeometry(2, 2, 4),
-                new THREE.MeshStandardMaterial({ 
-                  color: 0xffffff,
-                  metalness: 0.5,
-                  roughness: 0.5,
-                  emissive: 0xffffff,
-                  emissiveIntensity: 0.4
-                })
-              );
-              const offset = 6 + (Math.random() * 4);
-              block.position.set(lanes[laneIndex], 1, carGroup.position.z - spawnDistance - offset);
-              block.castShadow = true;
-              block.userData.isFinalBlock = true;
-              scene.add(block);
-              finalBlocks.push(block);
-            });
-          }
-        }
-      }
-
-      if (!autopilotRef.current && autopilotPendingRef.current && elapsed >= 0) {
-        let obstacleTooClose = false;
-        const pendingObstacles: THREE.Mesh[] = [...otherCars, ...finalBlocks];
-        pendingObstacles.forEach(obstacle => {
-          const relativeZ = obstacle.position.z - carGroup.position.z;
-          const relativeX = Math.abs(obstacle.position.x - carGroup.position.x);
-          // Treat blocks within ~60 units ahead (and 15 units behind) as too close
-          if (relativeZ < 15 && relativeZ > -60 && relativeX < 1.5) {
-            obstacleTooClose = true;
-          }
-        });
-
-        if (!obstacleTooClose) {
-          autopilotPendingRef.current = false;
-          setAutopilotPending(false);
-          setIsAutopilot(true);
-        }
-      }
-
-      if (autopilotRef.current && elapsed >= 0) {
+      // Always in Copilot mode - no manual control
+      if (elapsed >= 0) {
+        autopilotRef.current = true;
         wasAutopilot = true;
         const previousAutopilotTimer = autopilotTimer;
         autopilotTimer += deltaFactor;
         const autopilotHit90Tick = Math.floor(previousAutopilotTimer / 90) !== Math.floor(autopilotTimer / 90);
         
-        const approachingFinish = !finishLineCrossed && distanceToFinish > 0 && distanceToFinish < AUTOPILOT_BLIND_DISTANCE;
+        // const approachingFinish = !finishLineCrossed && distanceToFinish > 0 && distanceToFinish < AUTOPILOT_BLIND_DISTANCE; // Finish line removed
         const autopilotSpeed = AUTOPILOT_SPEED_UNITS; // 120 MPH equivalent
         const allObstacles: THREE.Mesh[] = [...otherCars, ...finalBlocks];
 
-        if (approachingFinish) {
+        // Finish line approach logic removed
+        // if (approachingFinish) {
+        if (false) { // Disabled - finish line removed
           if (blindLaneStateRef.current.index === null) {
             const laneOptions = [0, 1, 2].filter(lane => lane !== currentLaneIndex);
             blindLaneStateRef.current.index = laneOptions.length > 0
@@ -722,22 +647,26 @@ const DrivingSimulator = () => {
 
           allObstacles.forEach(obstacle => {
             const relativeZ = obstacle.position.z - carGroup.position.z;
-            if (relativeZ < 40 && relativeZ > -800) {
+            // More conservative: detect obstacles from further away
+            if (relativeZ < 60 && relativeZ > -800) {
               const obstacleX = obstacle.position.x;
               const distance = Math.abs(relativeZ);
 
-              if (distance < 40 && Math.abs(obstacleX - carGroup.position.x) < 1.5) {
+              // More conservative emergency stop
+              if (distance < 50 && Math.abs(obstacleX - carGroup.position.x) < 1.8) {
                 emergencyStop = true;
               }
 
               for (let i = 0; i < 3; i++) {
                 const laneCenterX = lanes[i];
                 const distanceFromLaneCenter = Math.abs(obstacleX - laneCenterX);
-                if (distanceFromLaneCenter < 0.6) {
+                // More conservative lane detection
+                if (distanceFromLaneCenter < 0.8) {
                   if (distance < laneInfo[i].nearestObstacle) {
                     laneInfo[i].nearestObstacle = distance;
                   }
-                  if (distance < 350) {
+                  // Mark unsafe from further away for more conservative behavior
+                  if (distance < 400) {
                     laneInfo[i].safe = false;
                   }
                 }
@@ -789,7 +718,8 @@ const DrivingSimulator = () => {
           allObstacles.forEach(obstacle => {
             const relativeZ = obstacle.position.z - carGroup.position.z;
             const relativeX = Math.abs(obstacle.position.x - carGroup.position.x);
-            if (relativeZ < 25 && relativeZ > -80 && relativeX < 1.3) {
+            // More conservative: detect from further away
+            if (relativeZ < 35 && relativeZ > -100 && relativeX < 1.5) {
               immediateObstacleAhead = true;
             }
           });
@@ -810,37 +740,6 @@ const DrivingSimulator = () => {
         if (autopilotDecision.lane !== currentLaneIndex) {
           currentLaneIndex = autopilotDecision.lane;
           targetLane = lanes[currentLaneIndex];
-        }
-      } else {
-        // Manual control - car starts moving automatically, player can accelerate/decelerate
-        
-        // When switching from autopilot to manual, cap speed immediately
-        if (wasAutopilot) {
-          carVelocity = Math.min(carVelocity, MANUAL_MAX_VELOCITY); // Cap to manual max (75 MPH)
-          wasAutopilot = false;
-        }
-        
-        // Auto-accelerate in manual mode (car starts moving automatically)
-        if (carVelocity < MANUAL_MAX_VELOCITY) {
-          carVelocity = Math.min(carVelocity + 0.005 * scaledDelta, MANUAL_MAX_VELOCITY); // Gradual acceleration to max 75 MPH
-        }
-        
-        // Player can accelerate further with ArrowUp
-        if (keys.ArrowUp) {
-          carVelocity = Math.min(carVelocity + 0.008 * scaledDelta, MANUAL_MAX_VELOCITY); // Max 75 MPH (MANUAL_MAX_VELOCITY carVelocity)
-        }
-        if (keys.ArrowDown) {
-          carVelocity = Math.max(carVelocity - 0.025 * scaledDelta, 0);
-        }
-        if (keys.ArrowLeft && currentLaneIndex > 0) {
-          currentLaneIndex--;
-          targetLane = lanes[currentLaneIndex];
-          keys.ArrowLeft = false;
-        }
-        if (keys.ArrowRight && currentLaneIndex < 2) {
-          currentLaneIndex++;
-          targetLane = lanes[currentLaneIndex];
-          keys.ArrowRight = false;
         }
       }
 
@@ -967,49 +866,16 @@ const DrivingSimulator = () => {
       camera.position.z = carGroup.position.z + 8;
       camera.lookAt(carGroup.position.x, carGroup.position.y, carGroup.position.z - 5);
 
-      // Check finish line crossing
-      if (carGroup.position.z <= finishLineZ && !isCompleteRef.current && !finishLineCrossed) {
-        finishLineCrossed = true;
-        finishLineCrossTime = Date.now();
-        simulationDataRef.current.finalScore = scoreRef.current;
-        simulationDataRef.current.failureLaneHits = failureLaneHitsRef.current;
-        ensureModeByUnitComplete();
-        setIsComplete(true);
-        clearInterval(timerInterval);
-        
-        console.log('=== SIMULATION DATA ===');
-        console.log('Mode by second:', simulationDataRef.current.modeBySecond);
-        console.log('White blocks hit:', simulationDataRef.current.whiteBlocksHit);
-        console.log('Failure-lane hits:', simulationDataRef.current.failureLaneHits);
-        console.log('Mode by unit length:', simulationDataRef.current.modeByUnit.length);
-        console.log('Collision events:', simulationDataRef.current.collisionEvents.length);
-        console.log('Final score:', simulationDataRef.current.finalScore);
-        console.log('======================');
-
-        if (typeof Qualtrics !== 'undefined') {
-          Qualtrics.SurveyEngine.setEmbeddedData('sim_mode_by_second', JSON.stringify(simulationDataRef.current.modeBySecond));
-          Qualtrics.SurveyEngine.setEmbeddedData('sim_white_blocks_hit', simulationDataRef.current.whiteBlocksHit);
-          Qualtrics.SurveyEngine.setEmbeddedData('sim_failure_lane_hits', simulationDataRef.current.failureLaneHits);
-          Qualtrics.SurveyEngine.setEmbeddedData('sim_mode_by_unit', JSON.stringify(simulationDataRef.current.modeByUnit));
-          Qualtrics.SurveyEngine.setEmbeddedData('sim_collision_events', JSON.stringify(simulationDataRef.current.collisionEvents));
-          Qualtrics.SurveyEngine.setEmbeddedData('sim_final_score', simulationDataRef.current.finalScore);
-          console.log('Data saved to Qualtrics embedded data');
-        }
-
-        // Remove all blocks immediately
-        finalBlocks.forEach(block => {
-          scene.remove(block);
-        });
-        finalBlocks.length = 0;
-      }
+      // Check finish line crossing - removed (finish line removed, completion based on timer only)
+      // Completion is now handled in the timer interval at 45 seconds
       
-      // Stop car after 5 seconds of coasting past finish line
-      if (finishLineCrossed && finishLineCrossTime) {
-        const timeSinceFinish = (Date.now() - finishLineCrossTime) / 1000;
-        if (timeSinceFinish >= 5) {
-          carVelocity = 0;
-        }
-      }
+      // Stop car logic removed - finish line removed
+      // if (finishLineCrossed && finishLineCrossTime) {
+      //   const timeSinceFinish = (Date.now() - finishLineCrossTime) / 1000;
+      //   if (timeSinceFinish >= 5) {
+      //     carVelocity = 0;
+      //   }
+      // }
 
       renderer.render(scene, camera);
     };
@@ -1020,8 +886,6 @@ const DrivingSimulator = () => {
       if (animationId !== undefined) {
         cancelAnimationFrame(animationId);
       }
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('resize', handleResize);
       clearInterval(timerInterval);
       if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
@@ -1087,22 +951,19 @@ const DrivingSimulator = () => {
             lineHeight: '1.6'
           }}>
             <h1 style={{ fontSize: '36px', marginBottom: '30px', color: '#ffd700' }}>
-              🚗 Safe Driving Simulator 🚗
+              🚗 {labelCondition} Simulation 🚗
             </h1>
             <div style={{ fontSize: '20px', marginBottom: '20px', fontWeight: 'bold' }}>
-              Your Mission:
+              Watch the Simulation:
             </div>
             <p style={{ marginBottom: '15px' }}>
-              This is a <strong>Safe Driving Simulator</strong>. Your goal is to reach the <strong>Finish Line</strong> as <b>quickly and safely</b> as possible.
+              You are about to watch a <strong>{labelCondition} simulation</strong>. The vehicle will drive autonomously using {labelCondition.toLowerCase()} technology. <strong>You do not need to interact with the simulation</strong>—simply observe how the {labelCondition.toLowerCase()} handles the driving.
             </p>
             <p style={{ marginBottom: '15px' }}>
-              ⚠️ <strong>You lose 5 points every second</strong> and <strong>10 points for every white obstacle you hit</strong>. Stay fast, stay clean, and protect your score.
-            </p>
-            <p style={{ marginBottom: '15px' }}>
-              Steer with the <strong>arrow keys</strong>, or switch to the <strong>{labelCondition}</strong> feature whenever you want help. You can move between manual control and {labelCondition.toLowerCase()} at any time.
+              The simulation will last <strong>45 seconds</strong>. During this time, you may see notifications appear on screen—these represent typical smartphone notifications that might appear while the {labelCondition.toLowerCase()} is driving.
             </p>
             <p style={{ marginBottom: '15px', color: '#99ff99' }}>
-              💰 Every 10 points is worth <strong>$0.01</strong> added to your study bonus— make every point count!
+              💰 You will receive a bonus of <strong>$0.50</strong> for watching the whole simulation.
             </p>
             <button
               onClick={startGame}
@@ -1147,7 +1008,7 @@ const DrivingSimulator = () => {
               fontFamily: 'monospace',
               fontWeight: 'bold'
             }}>
-              ⏱ {Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}
+              ⏱ {Math.floor((45 - elapsedTime) / 60)}:{((45 - elapsedTime) % 60).toString().padStart(2, '0')}
             </div>
             <div style={{
               background: isAutopilot ? 'rgba(138, 43, 226, 0.25)' : 'rgba(0, 0, 0, 0.7)',
@@ -1163,6 +1024,7 @@ const DrivingSimulator = () => {
             }}>
               {speed} MPH
             </div>
+            {/* Score display removed - still tracking in background
             <div style={{
               background: scoreFlash ? '#ff0000' : 'rgba(0, 0, 0, 0.65)',
               color: scoreFlash ? 'white' : (score > 500 ? '#44ff44' : score > 250 ? '#ffaa44' : '#ff4444'),
@@ -1175,7 +1037,9 @@ const DrivingSimulator = () => {
             }}>
               Score: {score}
             </div>
+            */}
           </div>
+          {/* Progress bar removed
           <div style={{
             position: 'absolute',
             top: '130px',
@@ -1212,6 +1076,7 @@ const DrivingSimulator = () => {
               }} />
             </div>
           </div>
+          */}
           {isAutopilot && (
             <style>{`
               @keyframes pulse {
@@ -1223,60 +1088,109 @@ const DrivingSimulator = () => {
         </>
       )}
 
-      {!isComplete && (
+      {!isComplete && gameStarted && (
         <div style={{
           position: 'absolute',
-          bottom: '260px',
+          bottom: '30px',
           left: '50%',
           transform: 'translateX(-50%)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '14px'
+          textAlign: 'center'
         }}>
           <div style={{
             minWidth: '220px',
             textAlign: 'center',
-            background: isAutopilot
-              ? 'rgba(68, 255, 68, 0.25)'
-              : autopilotPending
-              ? 'rgba(255, 170, 68, 0.35)'
-              : 'rgba(0, 0, 0, 0.55)',
-            color: isAutopilot ? '#44ff44' : autopilotPending ? '#ffaa44' : 'rgba(255,255,255,0.75)',
-            padding: isAutopilot ? '12px 24px' : '10px 22px',
+            background: 'rgba(68, 255, 68, 0.25)',
+            color: '#44ff44',
+            padding: '12px 24px',
             borderRadius: '999px',
             fontFamily: 'Arial, sans-serif',
-            fontWeight: isAutopilot ? 'bold' : 'normal',
-            border: isAutopilot ? '2px solid rgba(68, 255, 68, 0.6)' : '1px solid rgba(255,255,255,0.25)',
-            boxShadow: isAutopilot ? '0 0 12px rgba(68, 255, 68, 0.4)' : 'none',
+            fontWeight: 'bold',
+            border: '2px solid rgba(68, 255, 68, 0.6)',
+            boxShadow: '0 0 12px rgba(68, 255, 68, 0.4)',
             transition: 'all 0.3s ease',
             letterSpacing: '0.8px'
           }}>
-            {isAutopilot
-              ? `${labelCondition.toUpperCase()} ENGAGED`
-              : autopilotPending
-              ? `⏳ ${labelCondition.toUpperCase()} WAITING`
-              : '👤 MANUAL CONTROL'}
+            🤖 {labelCondition.toUpperCase()} ACTIVE
           </div>
-
-          <button
-            onClick={handleToggleAutopilot}
-            style={{
-              padding: '14px 36px',
-              fontSize: '18px',
-              fontWeight: 'bold',
-              background: isAutopilot ? '#ff4444' : autopilotPending ? '#ffaa44' : '#44ff44',
-              color: 'white',
-              border: 'none',
-              borderRadius: '999px',
-              cursor: 'pointer',
-              transition: 'all 0.25s'
-            }}
-          >
-            {isAutopilot ? 'Return to Manual' : autopilotPending ? `Cancel ${labelCondition}` : `Enable ${labelCondition}`}
-          </button>
         </div>
       )}
+
+      {/* Notification Overlay */}
+      {activeNotification && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '90%',
+          maxWidth: '600px',
+          background: 'rgba(0, 0, 0, 0.85)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: '20px',
+          padding: '40px',
+          zIndex: 2000,
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+          border: '2px solid rgba(255, 255, 255, 0.2)',
+          animation: 'slideIn 0.3s ease-out'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            marginBottom: '15px',
+            gap: '12px'
+          }}>
+            <div style={{ fontSize: '32px' }}>{activeNotification.icon}</div>
+            <div>
+              <div style={{
+                fontSize: '18px',
+                fontWeight: 'bold',
+                color: '#ffffff',
+                marginBottom: '4px'
+              }}>
+                {activeNotification.title}
+              </div>
+              <div style={{
+                fontSize: '12px',
+                color: 'rgba(255, 255, 255, 0.6)'
+              }}>
+                {activeNotification.type === 'text' ? 'Text Message' : 
+                 activeNotification.type === 'news' ? 'News Alert' : 
+                 'Social Media'}
+              </div>
+            </div>
+          </div>
+          <div style={{
+            fontSize: '16px',
+            color: 'rgba(255, 255, 255, 0.9)',
+            lineHeight: '1.5'
+          }}>
+            {activeNotification.content}
+          </div>
+          <div style={{
+            position: 'absolute',
+            top: '10px',
+            right: '10px',
+            fontSize: '20px',
+            color: 'rgba(255, 255, 255, 0.5)',
+            cursor: 'default'
+          }}>
+            📱
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translate(-50%, -60%);
+          }
+          to {
+            opacity: 1;
+            transform: translate(-50%, -50%);
+          }
+        }
+      `}</style>
 
       {isComplete && (
         <div style={{
@@ -1293,11 +1207,8 @@ const DrivingSimulator = () => {
           textAlign: 'center',
           fontWeight: 'bold'
         }}>
-          🏁 Race Complete! 🏁
-          <div style={{ fontSize: '24px', marginTop: '20px' }}>
-            Final Score: {score}
-          </div>
-          <div style={{ fontSize: '18px', marginTop: '15px', color: '#ffaa44' }}>
+          ✅ Simulation Complete! ✅
+          <div style={{ fontSize: '18px', marginTop: '20px', color: '#ffaa44' }}>
             Blocks Hit: {simulationDataRef.current.whiteBlocksHit}
           </div>
           <div style={{ fontSize: '14px', marginTop: '10px', color: '#aaaaaa' }}>
