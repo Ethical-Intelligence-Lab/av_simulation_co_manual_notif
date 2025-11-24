@@ -93,6 +93,7 @@ const DrivingSimulator = () => {
   });
   const flashTimeoutRef = useRef<number | null>(null);
   const countdownIntervalRef = useRef<number | null>(null);
+  const lastTabHiddenTimeRef = useRef<number | null>(null); // Track when tab was hidden
   const simulationDataRef = useRef<SimulationData>({
     modeBySecond: [], // Track mode at each second
     whiteBlocksHit: 0, // Count white block collisions
@@ -379,6 +380,23 @@ const DrivingSimulator = () => {
     const notificationsShown = new Set<number>();
     const notificationStartTimes = new Map<number, number>();
     
+    // Handle tab visibility changes to prevent score pausing
+    // Note: We update lastScoreDeduction in the visibility handler to prevent double-deduction
+    // The interval's score deduction will handle catching up properly
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Tab just became hidden - record the time
+        lastTabHiddenTimeRef.current = Date.now();
+      } else if (lastTabHiddenTimeRef.current && startTimeRef.current) {
+        // Tab just became visible - the interval will catch up on score deduction
+        // We just need to reset the tracking
+        lastTabHiddenTimeRef.current = null;
+      }
+    };
+    
+    // Add visibility change listener
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
     const timerInterval = setInterval(() => {
       if (!startTimeRef.current || !gameStartedRef.current || isCompleteRef.current) return;
       
@@ -446,14 +464,20 @@ const DrivingSimulator = () => {
       }
       
       // Time-based score deduction: -10 points per second
+      // This catches up on all missed seconds, even if the interval was throttled
       const now = Date.now();
       if (lastScoreDeduction === 0) {
         lastScoreDeduction = now;
       }
-      if (now - lastScoreDeduction >= 1000) {
-        scoreRef.current = Math.max(0, scoreRef.current - 10);
+      const timeSinceLastDeduction = now - lastScoreDeduction;
+      if (timeSinceLastDeduction >= 1000) {
+        // Calculate how many seconds have passed (catch up on all missed seconds)
+        const secondsPassed = Math.floor(timeSinceLastDeduction / 1000);
+        const pointsToDeduct = 10 * secondsPassed;
+        scoreRef.current = Math.max(0, scoreRef.current - pointsToDeduct);
         setScore(scoreRef.current);
-        lastScoreDeduction = now;
+        // Update lastScoreDeduction to the current time (or the last second boundary)
+        lastScoreDeduction = now - (timeSinceLastDeduction % 1000);
       }
       
       // Check for completion at 45 seconds
@@ -916,6 +940,7 @@ const DrivingSimulator = () => {
         cancelAnimationFrame(animationId);
       }
       window.removeEventListener('resize', handleResize);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       clearInterval(timerInterval);
       if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
       if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
