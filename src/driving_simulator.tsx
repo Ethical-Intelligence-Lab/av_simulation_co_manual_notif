@@ -66,6 +66,8 @@ interface Notification {
 
 const DrivingSimulator = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const [scale, setScale] = useState(1);
   const [isAutopilot, setIsAutopilot] = useState(true); // Always in Copilot mode
   const [autopilotPending, setAutopilotPending] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -161,6 +163,28 @@ const DrivingSimulator = () => {
   useEffect(() => {
     isCompleteRef.current = isComplete;
   }, [isComplete]);
+
+  // Scale calculation for uniform scaling
+  useEffect(() => {
+    const calculateScale = () => {
+      if (!wrapperRef.current) return;
+      const wrapper = wrapperRef.current;
+      const availableWidth = wrapper.clientWidth;
+      const availableHeight = wrapper.clientHeight;
+      
+      const baseWidth = 1280;
+      const baseHeight = 720;
+      
+      const scaleX = (availableWidth * 0.98) / baseWidth;
+      const scaleY = (availableHeight * 0.98) / baseHeight;
+      const newScale = Math.min(scaleX, scaleY);
+      
+      setScale(newScale);
+    };
+    calculateScale();
+    window.addEventListener('resize', calculateScale);
+    return () => window.removeEventListener('resize', calculateScale);
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -695,8 +719,8 @@ const DrivingSimulator = () => {
 
           allObstacles.forEach(obstacle => {
             const relativeZ = obstacle.position.z - carGroup.position.z;
-            // More conservative: detect obstacles from further away
-            if (relativeZ < 60 && relativeZ > -800) {
+            // IMPROVED: Detect obstacles from much further away (200 instead of 60)
+            if (relativeZ < 200 && relativeZ > -1000) {
               const obstacleX = obstacle.position.x;
               const distance = Math.abs(relativeZ);
 
@@ -708,13 +732,13 @@ const DrivingSimulator = () => {
               for (let i = 0; i < 3; i++) {
                 const laneCenterX = lanes[i];
                 const distanceFromLaneCenter = Math.abs(obstacleX - laneCenterX);
-                // More conservative lane detection
-                if (distanceFromLaneCenter < 0.8) {
+                // IMPROVED: Wider detection (1.5 instead of 0.8)
+                if (distanceFromLaneCenter < 1.5) {
                   if (distance < laneInfo[i].nearestObstacle) {
                     laneInfo[i].nearestObstacle = distance;
                   }
-                  // Mark unsafe from further away for more conservative behavior
-                  if (distance < 400) {
+                  // IMPROVED: Mark unsafe from further away (800 instead of 400)
+                  if (distance < 800) {
                     laneInfo[i].safe = false;
                   }
                 }
@@ -725,32 +749,27 @@ const DrivingSimulator = () => {
           let bestLane = currentLaneIndex;
           let maxDistance = laneInfo[currentLaneIndex].nearestObstacle;
 
+          // IMPROVED: Always pick lane with most clearance
           for (let i = 0; i < 3; i++) {
-            if (laneInfo[i].nearestObstacle > maxDistance + 35) {
+            if (laneInfo[i].nearestObstacle > maxDistance) {
               maxDistance = laneInfo[i].nearestObstacle;
               bestLane = i;
             }
           }
 
+          // IMPROVED: Switch immediately if current lane unsafe
           if (!laneInfo[currentLaneIndex].safe) {
             for (let i = 0; i < 3; i++) {
-              if (laneInfo[i].safe && laneInfo[i].nearestObstacle > laneInfo[currentLaneIndex].nearestObstacle) {
+              if (laneInfo[i].safe) {
                 bestLane = i;
-                maxDistance = laneInfo[i].nearestObstacle;
+                break;
               }
             }
           }
 
-          for (let i = 0; i < 3; i++) {
-            if (laneInfo[i].nearestObstacle > laneInfo[bestLane].nearestObstacle) {
-              bestLane = i;
-            }
-          }
-
-          if (laneInfo[bestLane].nearestObstacle > 450 && bestLane !== 1 && laneInfo[1].nearestObstacle > 450) {
-            if (autopilotHit90Tick) {
-              bestLane = 1;
-            }
+          // IMPROVED: Prefer center when all clear (600 instead of 450)
+          if (laneInfo[1].nearestObstacle > 600) {
+            bestLane = 1;
           }
 
           autopilotDecision = {
@@ -796,7 +815,8 @@ const DrivingSimulator = () => {
       //   carVelocity = AUTOPILOT_SPEED_UNITS;
       // }
 
-      const laneChangeEase = autopilotRef.current ? 0.2 : 0.1;
+      // IMPROVED: Faster lane changes (0.35 instead of 0.2)
+      const laneChangeEase = autopilotRef.current ? 0.35 : 0.1;
       const laneChangeFactor = Math.min(laneChangeEase * 1.0, 1); // Fixed timestep: always 1.0
       carLaneOffset += (targetLane - carLaneOffset) * laneChangeFactor;
       carGroup.position.x = carLaneOffset;
@@ -835,9 +855,11 @@ const DrivingSimulator = () => {
         
         if (dx < 1.3 && dz < 2.5) {
           if (!collisionCooldown.has(index) || frameCount - collisionCooldown.get(index) > 60) {
-            scoreRef.current = Math.max(0, scoreRef.current - 10);
-            setScore(scoreRef.current);
+            // Score deduction removed for deterministic 550 final score
+            // scoreRef.current = Math.max(0, scoreRef.current - 10);
+            // setScore(scoreRef.current);
             
+            // Still track collision data for research
             const collisionUnit = Math.min(Math.floor(Math.abs(carGroup.position.z)), TRACK_LENGTH);
             const modeLabel = autopilotRef.current ? labelCondition.toLowerCase() : 'manual';
             simulationDataRef.current.collisionEvents.push({
@@ -847,8 +869,6 @@ const DrivingSimulator = () => {
               z: carGroup.position.z,
               type: 'traffic'
             });
-            
-            // No visual feedback - score flash removed
             
             collisionCooldown.set(index, frameCount);
           }
@@ -872,9 +892,11 @@ const DrivingSimulator = () => {
           const blockKey = `block_${i}`;
           if (dx < 1.8 && dz < 3) {
             if (!collisionCooldown.has(blockKey) || frameCount - collisionCooldown.get(blockKey) > 60) {
-              scoreRef.current = Math.max(0, scoreRef.current - 10);
-              setScore(scoreRef.current);
+              // Score deduction removed for deterministic 550 final score
+              // scoreRef.current = Math.max(0, scoreRef.current - 10);
+              // setScore(scoreRef.current);
               
+              // Still track collision data for research
               const collisionUnit = Math.min(Math.floor(Math.abs(carGroup.position.z)), TRACK_LENGTH);
               const modeLabel = autopilotRef.current ? labelCondition.toLowerCase() : 'manual';
               simulationDataRef.current.collisionEvents.push({
@@ -886,16 +908,12 @@ const DrivingSimulator = () => {
                 isBlindLane: !!block.userData.isBlindLane
               });
               
-              // Track white block collision
+              // Still track for research
               simulationDataRef.current.whiteBlocksHit++;
               if (block.userData.isBlindLane) {
                 failureLaneHitsRef.current += 1;
                 simulationDataRef.current.failureLaneHits = failureLaneHitsRef.current;
               }
-              
-              if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
-              setScoreFlash(true);
-              flashTimeoutRef.current = window.setTimeout(() => setScoreFlash(false), 300);
               
               collisionCooldown.set(blockKey, frameCount);
             }
@@ -952,8 +970,27 @@ const DrivingSimulator = () => {
   }, []);
 
   return (
-    <div style={{ width: '100%', height: '100vh', overflow: 'hidden', position: 'relative' }}>
-      <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+    <div 
+      ref={wrapperRef}
+      style={{ 
+        width: '100%', 
+        height: '100vh',
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        background: '#000',
+        overflow: 'hidden'
+      }}
+    >
+      <div style={{
+        width: '1280px',
+        height: '720px',
+        position: 'relative',
+        overflow: 'hidden',
+        transform: `scale(${scale})`,
+        transformOrigin: 'center center'
+      }}>
+        <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
       
       {countdown !== null && (
         <div style={{
@@ -1049,7 +1086,8 @@ const DrivingSimulator = () => {
             display: 'flex',
             gap: '18px',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            zIndex: 100
           }}>
             <div style={{
               background: 'rgba(0, 0, 0, 0.65)',
@@ -1140,10 +1178,11 @@ const DrivingSimulator = () => {
       {!isComplete && gameStarted && (
         <div style={{
           position: 'absolute',
-          bottom: '200px', // Moved up from 30px to position right under the car
+          bottom: '180px',
           left: '50%',
           transform: 'translateX(-50%)',
-          textAlign: 'center'
+          textAlign: 'center',
+          zIndex: 100
         }}>
           <div style={{
             minWidth: '320px', // Increased from 220px
@@ -1169,12 +1208,11 @@ const DrivingSimulator = () => {
       {activeNotification && (
         <div style={{
           position: 'absolute',
-          top: '50%',
+          top: '180px',
           left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: '95%',
-          maxWidth: '700px',
-          minHeight: '200px',
+          transform: 'translateX(-50%)',
+          width: '750px',
+          bottom: '100px',
           background: 'rgba(0, 0, 0, 0.95)',
           backdropFilter: 'blur(10px)',
           borderRadius: '20px',
@@ -1182,7 +1220,10 @@ const DrivingSimulator = () => {
           zIndex: 2000,
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
           border: '2px solid rgba(255, 255, 255, 0.2)',
-          animation: 'slideIn 0.3s ease-out'
+          animation: 'slideIn 0.3s ease-out',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center'
         }}>
           <div style={{
             display: 'flex',
@@ -1234,11 +1275,11 @@ const DrivingSimulator = () => {
         @keyframes slideIn {
           from {
             opacity: 0;
-            transform: translate(-50%, -60%);
+            transform: translateX(-50%) translateY(-20px);
           }
           to {
             opacity: 1;
-            transform: translate(-50%, -50%);
+            transform: translateX(-50%) translateY(0);
           }
         }
       `}</style>
@@ -1269,6 +1310,7 @@ const DrivingSimulator = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };
