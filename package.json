@@ -2,7 +2,7 @@
   "name": "av_labeling_simulation_copilot",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://Ethical-Intelligence-Lab.github.io/av_labeling_simulation_copilot",
+  "homepage": "https://Ethical-Intelligence-Lab.github.io/av_simulation_co_manual_notif",
   "dependencies": {
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
@@ -25,7 +25,7 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d build --repo https://github.com/Ethical-Intelligence-Lab/av_labeling_simulation_copilot"
+    "deploy": "gh-pages -d build --repo https://github.com/Ethical-Intelligence-Lab/av_simulation_co_manual_notif"
   },
   "eslintConfig": {
     "extends": [
