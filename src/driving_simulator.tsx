@@ -1902,19 +1902,21 @@ const DrivingSimulator = () => {
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
-              width: '600px',
-              height: '30vh',
+              width: 'min(600px, 90vw)',
+              maxHeight: '90vh',
+              minHeight: '400px',
               background: 'rgba(0, 0, 0, 0.95)',
               backdropFilter: 'blur(10px)',
               borderRadius: '20px',
-              padding: '40px',
+              padding: 'min(40px, 4vh)',
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
               border: '2px solid rgba(255, 255, 255, 0.2)',
               zIndex: 2000,
               animation: 'slideIn 0.3s ease-out',
               display: 'flex',
               flexDirection: 'column',
-              overflowY: 'auto'
+              overflow: 'visible',
+              boxSizing: 'border-box'
             }}
             onClick={(e) => {
               // Close when clicking outside the content
@@ -1926,13 +1928,14 @@ const DrivingSimulator = () => {
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              marginBottom: '20px',
-              gap: '15px'
+              marginBottom: 'min(20px, 2vh)',
+              gap: '15px',
+              flexShrink: 0
             }}>
-              <div style={{ fontSize: '48px' }}>{selectedNotification.icon}</div>
-              <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 'min(48px, 5vw)' }}>{selectedNotification.icon}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{
-                  fontSize: '28px',
+                  fontSize: 'min(28px, 3.5vw)',
                   fontWeight: 'bold',
                   color: '#ffffff',
                   marginBottom: '6px'
@@ -1940,7 +1943,7 @@ const DrivingSimulator = () => {
                   {selectedNotification.title}
                 </div>
                 <div style={{
-                  fontSize: '16px',
+                  fontSize: 'min(16px, 2vw)',
                   color: 'rgba(255, 255, 255, 0.6)'
                 }}>
                   {selectedNotification.type === 'text' ? 'Text Message' : 
@@ -1963,7 +1966,8 @@ const DrivingSimulator = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  transition: 'background 0.2s'
+                  transition: 'background 0.2s',
+                  flexShrink: 0
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
@@ -1972,9 +1976,11 @@ const DrivingSimulator = () => {
               </button>
             </div>
             <div style={{
-              fontSize: '20px',
+              fontSize: 'min(20px, 2.5vw)',
               color: 'rgba(255, 255, 255, 0.9)',
-              lineHeight: '1.6'
+              lineHeight: '1.6',
+              overflow: 'visible',
+              wordWrap: 'break-word'
             }}>
               {selectedNotification.content}
             </div>
