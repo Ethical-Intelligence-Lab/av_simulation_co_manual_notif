@@ -266,9 +266,9 @@ const DrivingSimulator = () => {
       const availableWidth = wrapper.clientWidth;
       const availableHeight = wrapper.clientHeight;
       
-      // Base dimensions (what we designed for)
-      const baseWidth = 1280;
-      const baseHeight = 720;
+      // Base dimensions (what we designed for) - reduced to fit viewport without scrolling
+      const baseWidth = 1067;
+      const baseHeight = 600;
       
       // Calculate scale to fit - allow scaling up to fill space (with small margin)
       const scaleX = (availableWidth * 0.98) / baseWidth;  // 2% margin
@@ -776,13 +776,13 @@ const DrivingSimulator = () => {
         console.log('======================');
 
         // Save data to Qualtrics if available
-          if (typeof Qualtrics !== 'undefined') {
-            Qualtrics.SurveyEngine.setEmbeddedData('sim_mode_by_second', JSON.stringify(simulationDataRef.current.modeBySecond));
-            Qualtrics.SurveyEngine.setEmbeddedData('sim_white_blocks_hit', simulationDataRef.current.whiteBlocksHit);
-            Qualtrics.SurveyEngine.setEmbeddedData('sim_failure_lane_hits', simulationDataRef.current.failureLaneHits);
-            Qualtrics.SurveyEngine.setEmbeddedData('sim_mode_by_unit', JSON.stringify(simulationDataRef.current.modeByUnit));
-            Qualtrics.SurveyEngine.setEmbeddedData('sim_collision_events', JSON.stringify(simulationDataRef.current.collisionEvents));
-            Qualtrics.SurveyEngine.setEmbeddedData('sim_final_score', simulationDataRef.current.finalScore);
+        if (typeof Qualtrics !== 'undefined') {
+          Qualtrics.SurveyEngine.setEmbeddedData('sim_mode_by_second', JSON.stringify(simulationDataRef.current.modeBySecond));
+          Qualtrics.SurveyEngine.setEmbeddedData('sim_white_blocks_hit', simulationDataRef.current.whiteBlocksHit);
+          Qualtrics.SurveyEngine.setEmbeddedData('sim_failure_lane_hits', simulationDataRef.current.failureLaneHits);
+          Qualtrics.SurveyEngine.setEmbeddedData('sim_mode_by_unit', JSON.stringify(simulationDataRef.current.modeByUnit));
+          Qualtrics.SurveyEngine.setEmbeddedData('sim_collision_events', JSON.stringify(simulationDataRef.current.collisionEvents));
+          Qualtrics.SurveyEngine.setEmbeddedData('sim_final_score', simulationDataRef.current.finalScore);
             Qualtrics.SurveyEngine.setEmbeddedData('sim_finish_line_cross_second', simulationDataRef.current.finishLineCrossSecond !== null ? simulationDataRef.current.finishLineCrossSecond : '');
             Qualtrics.SurveyEngine.setEmbeddedData('sim_notifications', JSON.stringify(simulationDataRef.current.notifications));
             Qualtrics.SurveyEngine.setEmbeddedData('sim_notifications_total', simulationDataRef.current.notificationsTotal);
@@ -794,8 +794,8 @@ const DrivingSimulator = () => {
               openSessions: n.openSessions
             }));
             Qualtrics.SurveyEngine.setEmbeddedData('sim_notifications_open_duration', JSON.stringify(notificationsWithDuration));
-            console.log('Data saved to Qualtrics embedded data');
-          }
+          console.log('Data saved to Qualtrics embedded data');
+        }
       }
 
       const distanceTravelled = Math.abs(carGroup.position.z);
@@ -828,38 +828,38 @@ const DrivingSimulator = () => {
       // Block spawning - using finish line logic from original
       if (!finishLineCrossed && elapsed >= 0) {
         if (distanceToFinish > AUTOPILOT_BLIND_DISTANCE) {
-          const distanceSinceLastSpawn = Math.abs(carGroup.position.z - lastBlockSpawnZ);
+        const distanceSinceLastSpawn = Math.abs(carGroup.position.z - lastBlockSpawnZ);
           // Constant density: use baseBlockSpawnDistance for consistent spacing
           // To enable variable density: use: Math.max(55, baseBlockSpawnDistance - densityLevel * 7)
           const dynamicInterval = baseBlockSpawnDistance;
           if (distanceTravelled > 80 && distanceSinceLastSpawn >= dynamicInterval) {
-            lastBlockSpawnZ = carGroup.position.z;
+          lastBlockSpawnZ = carGroup.position.z;
             const spawnDistance = 80;
-            
+          
             // Deterministic lane pattern: cycle through lanes [0, 2, 1, 0, 2, 1, ...]
             const lanePattern = [0, 2, 1];
-            const laneIndex = lanePattern[blockSpawnCount % lanePattern.length];
-            
+          const laneIndex = lanePattern[blockSpawnCount % lanePattern.length];
+          
             // Deterministic offset pattern: cycle through offsets
             const offsetPattern = [3, 5, 4, 6, 3.5, 5.5];
-            const offset = offsetPattern[blockSpawnCount % offsetPattern.length];
-            
-            const block = new THREE.Mesh(
-              new THREE.BoxGeometry(2, 2, 4),
-              new THREE.MeshStandardMaterial({ 
-                color: 0xffffff,
-                metalness: 0.5,
-                roughness: 0.5,
-                emissive: 0xffffff,
-                emissiveIntensity: 0.3
-              })
-            );
-            block.position.set(lanes[laneIndex], 1, carGroup.position.z - spawnDistance - offset);
-            block.castShadow = true;
-            block.userData.isFinalBlock = true;
-            scene.add(block);
-            finalBlocks.push(block);
-            
+          const offset = offsetPattern[blockSpawnCount % offsetPattern.length];
+          
+          const block = new THREE.Mesh(
+            new THREE.BoxGeometry(2, 2, 4),
+            new THREE.MeshStandardMaterial({ 
+              color: 0xffffff,
+              metalness: 0.5,
+              roughness: 0.5,
+              emissive: 0xffffff,
+              emissiveIntensity: 0.3
+            })
+          );
+          block.position.set(lanes[laneIndex], 1, carGroup.position.z - spawnDistance - offset);
+          block.castShadow = true;
+          block.userData.isFinalBlock = true;
+          scene.add(block);
+          finalBlocks.push(block);
+          
             blockSpawnCount++;
           }
         }
@@ -1012,7 +1012,7 @@ const DrivingSimulator = () => {
         const allObstacles: THREE.Mesh[] = [...otherCars, ...finalBlocks];
 
         // Normal autopilot behavior (no deliberate failure)
-        const laneInfo = [
+          const laneInfo = [
             { safe: true, nearestObstacle: Infinity },
             { safe: true, nearestObstacle: Infinity },
             { safe: true, nearestObstacle: Infinity }
@@ -1104,12 +1104,12 @@ const DrivingSimulator = () => {
               carVelocity = Math.min(carVelocity + 0.05 * 1.0, autopilotSpeed); // Fixed timestep: per-frame rate
             } else if (carVelocity > autopilotSpeed) {
               carVelocity = Math.max(carVelocity - 0.05 * 1.0, autopilotSpeed); // Fixed timestep: per-frame rate
-            }
           }
-
-          if (autopilotDecision.lane !== currentLaneIndex) {
-            currentLaneIndex = autopilotDecision.lane;
-            targetLane = lanes[currentLaneIndex];
+        }
+ 
+        if (autopilotDecision.lane !== currentLaneIndex) {
+          currentLaneIndex = autopilotDecision.lane;
+          targetLane = lanes[currentLaneIndex];
           }
       } else {
         // Manual control - car starts moving automatically, player can accelerate/decelerate
@@ -1493,8 +1493,8 @@ const DrivingSimulator = () => {
     >
       {/* Inner container: fixed base size, scaled to fit */}
       <div style={{ 
-        width: '1280px',
-        height: '720px',
+        width: '1067px',
+        height: '600px',
         position: 'relative',
         overflow: 'hidden',
         transform: `scale(${scale})`,
@@ -1518,7 +1518,7 @@ const DrivingSimulator = () => {
             color: 'white'
           }}>
           <div style={{
-            fontSize: '120px',
+            fontSize: '108px',
             fontWeight: 'bold',
             color: countdown === 0 ? '#44ff44' : '#ffd700',
             textShadow: '0 0 20px rgba(255, 255, 255, 0.5)'
@@ -1542,43 +1542,43 @@ const DrivingSimulator = () => {
             alignItems: 'center',
             zIndex: 1000,
             color: 'white',
-            padding: '40px',
+            padding: '36px',
             boxSizing: 'border-box'
           }}>
             <div style={{
-              maxWidth: '900px',
+              maxWidth: '810px',
               width: '90%',
               textAlign: 'center',
-              fontSize: '18px',
+              fontSize: '16px',
               lineHeight: '1.6'
             }}>
-              <h1 style={{ fontSize: '36px', marginBottom: '30px', color: '#ffd700' }}>
+              <h1 style={{ fontSize: '32px', marginBottom: '27px', color: '#ffd700' }}>
                 🚗 AEON {labelCondition} Simulation 🚗
               </h1>
-              <p style={{ marginBottom: '20px' }}>
+              <p style={{ marginBottom: '18px' }}>
                 This is a driving simulation. Your goal is to reach the Finish Line and answer all your cell phone messages as quickly and safely as possible.
               </p>
-              <p style={{ marginBottom: '20px' }}>
+              <p style={{ marginBottom: '18px' }}>
                 You start in <strong style={{ textDecoration: 'underline' }}>{labelCondition}</strong>. You can switch to manual mode using the "Return to Manual" button. In manual mode, you can navigate using the arrow keys (up, down, left, right). You can also switch back to <strong style={{ textDecoration: 'underline' }}>{labelCondition}</strong> mode from manual mode.
               </p>
-              <p style={{ marginBottom: '20px' }}>
+              <p style={{ marginBottom: '18px' }}>
                 You start with <strong style={{ color: '#44ff44' }}>1000</strong> points.
               </p>
-              <p style={{ marginBottom: '20px' }}>
+              <p style={{ marginBottom: '18px' }}>
                 You lose <strong style={{ color: '#ff4444' }}>10 points</strong> per obstacle hit and <strong style={{ color: '#ff4444' }}>5 points</strong> per second that passes. Time will only stop passing once you reach the finish line AND you have answered all your cell phone messages.
               </p>
-              <p style={{ marginBottom: '20px' }}>
+              <p style={{ marginBottom: '18px' }}>
                 Each time you receive a cellphone notification, it will appear at the bottom of your screen.
               </p>
-              <p style={{ marginBottom: '25px' }}>
+              <p style={{ marginBottom: '23px' }}>
                 To read it, click the icon, read the message, then close the message.
               </p>
               
               <button
                 onClick={startGame}
                 style={{
-                  padding: '15px 40px',
-                  fontSize: '20px',
+                  padding: '14px 36px',
+                  fontSize: '18px',
                   fontWeight: 'bold',
                   background: '#44ff44',
                   color: 'white',
@@ -1612,9 +1612,9 @@ const DrivingSimulator = () => {
               <div style={{
                 background: 'rgba(0, 0, 0, 0.65)',
                 color: 'white',
-                padding: '10px 20px',
+                padding: '9px 18px',
                 borderRadius: '8px',
-                fontSize: '20px',
+                fontSize: '18px',
                 fontFamily: 'monospace',
                 fontWeight: 'bold'
               }}>
@@ -1623,9 +1623,9 @@ const DrivingSimulator = () => {
               <div style={{
                 background: isAutopilot ? 'rgba(138, 43, 226, 0.25)' : 'rgba(0, 0, 0, 0.7)',
                 color: isAutopilot ? '#debaff' : '#ffffff',
-                padding: isAutopilot ? '16px 28px' : '12px 24px',
+                padding: isAutopilot ? '14px 25px' : '11px 22px',
                 borderRadius: '50px',
-                fontSize: isAutopilot ? '30px' : '22px',
+                fontSize: isAutopilot ? '27px' : '20px',
                 fontFamily: 'monospace',
                 fontWeight: 'bold',
                 border: isAutopilot ? '2px solid rgba(138, 43, 226, 0.6)' : '1px solid rgba(255,255,255,0.45)',
@@ -1637,9 +1637,9 @@ const DrivingSimulator = () => {
               <div style={{
                 background: 'rgba(0, 0, 0, 0.65)',
                 color: scoreFlash ? '#ff4444' : (score > 500 ? '#44ff44' : score > 250 ? '#ffaa44' : '#ff4444'),
-                padding: '10px 20px',
+                padding: '9px 18px',
                 borderRadius: '8px',
-                fontSize: '20px',
+                fontSize: '18px',
                 fontFamily: 'monospace',
                 fontWeight: 'bold',
                 transition: 'color 0.1s ease'
@@ -1649,7 +1649,7 @@ const DrivingSimulator = () => {
             </div>
             <div style={{
               position: 'absolute',
-              top: '110px',
+              top: '90px',
               left: '50%',
               transform: 'translateX(-50%)',
               width: '52%',
@@ -1660,7 +1660,7 @@ const DrivingSimulator = () => {
             }}>
               <div style={{
                 color: 'rgba(255, 255, 255, 0.8)',
-                fontSize: '13px',
+                fontSize: '12px',
                 fontFamily: 'Arial, sans-serif',
                 letterSpacing: '0.5px',
                 whiteSpace: 'nowrap'
@@ -1669,7 +1669,7 @@ const DrivingSimulator = () => {
               </div>
               <div style={{
                 flexGrow: 1,
-                height: '10px',
+                height: '9px',
                 background: 'rgba(255, 255, 255, 0.2)',
                 borderRadius: '6px',
                 border: '1px solid rgba(255, 255, 255, 0.35)',
@@ -1698,7 +1698,7 @@ const DrivingSimulator = () => {
         {!isComplete && gameStarted && (
           <div style={{
             position: 'absolute',
-            bottom: '260px',
+            bottom: '180px',
             left: '50%',
             transform: 'translateX(-50%)',
             display: 'flex',
@@ -1708,7 +1708,7 @@ const DrivingSimulator = () => {
             zIndex: 100
           }}>
             <div style={{
-              minWidth: '220px',
+              minWidth: '200px',
               textAlign: 'center',
               background: isAutopilot
                 ? 'rgba(68, 255, 68, 0.25)'
@@ -1716,7 +1716,7 @@ const DrivingSimulator = () => {
                 ? 'rgba(255, 170, 68, 0.35)'
                 : 'rgba(0, 0, 0, 0.55)',
               color: isAutopilot ? '#44ff44' : autopilotPending ? '#ffaa44' : 'rgba(255,255,255,0.75)',
-              padding: isAutopilot ? '12px 24px' : '10px 22px',
+              padding: isAutopilot ? '11px 22px' : '9px 20px',
               borderRadius: '999px',
               fontFamily: 'Arial, sans-serif',
               fontWeight: isAutopilot ? 'bold' : 'normal',
@@ -1735,8 +1735,8 @@ const DrivingSimulator = () => {
             <button
               onClick={handleToggleAutopilot}
               style={{
-                padding: '14px 36px',
-                fontSize: '18px',
+                padding: '13px 32px',
+                fontSize: '16px',
                 fontWeight: 'bold',
                 background: isAutopilot ? '#ff4444' : autopilotPending ? '#ffaa44' : '#44ff44',
                 color: 'white',
@@ -1760,9 +1760,9 @@ const DrivingSimulator = () => {
             transform: 'translateX(-50%)',
             background: 'rgba(0, 0, 0, 0.9)',
             color: 'white',
-            padding: '12px 24px',
+            padding: '11px 22px',
             borderRadius: '8px',
-            fontSize: '16px',
+            fontSize: '14px',
             fontFamily: 'Arial, sans-serif',
             zIndex: 1500,
             animation: 'fadeInOut 2s ease-in-out',
@@ -1782,9 +1782,9 @@ const DrivingSimulator = () => {
             transform: 'translateX(-50%)',
             background: 'rgba(255, 68, 68, 0.95)',
             color: 'white',
-            padding: '14px 28px',
+            padding: '13px 25px',
             borderRadius: '8px',
-            fontSize: '17px',
+            fontSize: '15px',
             fontFamily: 'Arial, sans-serif',
             fontWeight: 'bold',
             zIndex: 1500,
@@ -1808,7 +1808,7 @@ const DrivingSimulator = () => {
             alignItems: 'center',
             zIndex: 1000,
             background: 'rgba(0, 0, 0, 0.6)',
-            padding: '10px 20px',
+            padding: '9px 18px',
             borderRadius: '15px',
             backdropFilter: 'blur(10px)'
           }}>
@@ -1845,9 +1845,9 @@ const DrivingSimulator = () => {
                   });
                 }}
                 style={{
-                  width: '60px',
-                  height: '60px',
-                  borderRadius: '12px',
+                  width: '54px',
+                  height: '54px',
+                  borderRadius: '11px',
                   background: notif.seen 
                     ? 'rgba(100, 100, 100, 0.5)' 
                     : 'rgba(68, 255, 68, 0.3)',
@@ -1857,7 +1857,7 @@ const DrivingSimulator = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '32px',
+                  fontSize: '29px',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
                   boxShadow: notif.seen 
@@ -1884,8 +1884,8 @@ const DrivingSimulator = () => {
                     position: 'absolute',
                     top: '-5px',
                     right: '-5px',
-                    width: '16px',
-                    height: '16px',
+                    width: '14px',
+                    height: '14px',
                     borderRadius: '50%',
                     background: '#ff4444',
                     border: '2px solid white'
@@ -1904,19 +1904,19 @@ const DrivingSimulator = () => {
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
-              width: 'min(600px, 90vw)',
+              width: 'min(540px, 90vw)',
               maxHeight: '90vh',
-              minHeight: '400px',
-              background: 'rgba(0, 0, 0, 0.95)',
-              backdropFilter: 'blur(10px)',
-              borderRadius: '20px',
-              padding: 'min(40px, 4vh)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
-              border: '2px solid rgba(255, 255, 255, 0.2)',
-              zIndex: 2000,
-              animation: 'slideIn 0.3s ease-out',
-              display: 'flex',
-              flexDirection: 'column',
+              minHeight: '360px',
+            background: 'rgba(0, 0, 0, 0.95)',
+            backdropFilter: 'blur(10px)',
+              borderRadius: '18px',
+              padding: 'min(36px, 4vh)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+            border: '2px solid rgba(255, 255, 255, 0.2)',
+            zIndex: 2000,
+            animation: 'slideIn 0.3s ease-out',
+            display: 'flex',
+            flexDirection: 'column',
               overflow: 'visible',
               boxSizing: 'border-box'
             }}
@@ -1934,18 +1934,18 @@ const DrivingSimulator = () => {
               gap: '15px',
               flexShrink: 0
             }}>
-              <div style={{ fontSize: 'min(48px, 5vw)' }}>{selectedNotification.icon}</div>
+              <div style={{ fontSize: 'min(43px, 5vw)' }}>{selectedNotification.icon}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{
-                  fontSize: 'min(28px, 3.5vw)',
+                  fontSize: 'min(25px, 3.5vw)',
                   fontWeight: 'bold',
                   color: '#ffffff',
-                  marginBottom: '6px'
+                  marginBottom: '5px'
                 }}>
                   {selectedNotification.title}
                 </div>
                 <div style={{
-                  fontSize: 'min(16px, 2vw)',
+                  fontSize: 'min(14px, 2vw)',
                   color: 'rgba(255, 255, 255, 0.6)'
                 }}>
                   {selectedNotification.type === 'text' ? 'Text Message' : 
@@ -1960,10 +1960,10 @@ const DrivingSimulator = () => {
                   background: 'rgba(255, 255, 255, 0.1)',
                   border: 'none',
                   borderRadius: '50%',
-                  width: '32px',
-                  height: '32px',
+                  width: '29px',
+                  height: '29px',
                   color: 'white',
-                  fontSize: '20px',
+                  fontSize: '18px',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -1978,7 +1978,7 @@ const DrivingSimulator = () => {
               </button>
             </div>
             <div style={{
-              fontSize: 'min(20px, 2.5vw)',
+              fontSize: 'min(18px, 2.5vw)',
               color: 'rgba(255, 255, 255, 0.9)',
               lineHeight: '1.6',
               overflow: 'visible',
@@ -2030,21 +2030,21 @@ const DrivingSimulator = () => {
             transform: 'translate(-50%, -50%)',
             background: 'rgba(0, 0, 0, 0.9)',
             color: 'white',
-            padding: '40px 60px',
-            borderRadius: '15px',
-            fontSize: '32px',
+            padding: '36px 54px',
+            borderRadius: '14px',
+            fontSize: '29px',
             fontFamily: 'Arial, sans-serif',
             textAlign: 'center',
             fontWeight: 'bold'
           }}>
             ✅ Simulation Complete! ✅
-            <div style={{ fontSize: '24px', marginTop: '20px' }}>
+            <div style={{ fontSize: '22px', marginTop: '18px' }}>
               Final Score: {score}
             </div>
-            <div style={{ fontSize: '18px', marginTop: '15px', color: '#ffaa44' }}>
+            <div style={{ fontSize: '16px', marginTop: '14px', color: '#ffaa44' }}>
               Blocks Hit: {simulationDataRef.current.whiteBlocksHit}
             </div>
-            <div style={{ fontSize: '14px', marginTop: '10px', color: '#aaaaaa' }}>
+            <div style={{ fontSize: '13px', marginTop: '9px', color: '#aaaaaa' }}>
             </div>
           </div>
         )}
