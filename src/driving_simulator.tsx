@@ -498,6 +498,7 @@ const DrivingSimulator = () => {
       const key = e.key;
       if (key in keys) {
         keys[key] = true;
+        e.preventDefault(); // Prevent default browser behavior (scrolling)
       }
     };
 
@@ -505,6 +506,7 @@ const DrivingSimulator = () => {
       const key = e.key;
       if (key in keys) {
         keys[key] = false;
+        e.preventDefault(); // Prevent default browser behavior
       }
     };
 
@@ -1480,8 +1482,8 @@ const DrivingSimulator = () => {
       ref={wrapperRef}
       style={{ 
         width: '100%', 
-        height: '100vh',
-        maxHeight: '100vh',
+        height: '100%',
+        maxHeight: '100%',
         display: 'flex', 
         justifyContent: 'center', 
         alignItems: 'center',
