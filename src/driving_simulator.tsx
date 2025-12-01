@@ -35,7 +35,7 @@ interface SimulationData {
   notifications: Notification[];
   notificationsSeen: number; // Count of notifications that were opened/seen
   notificationsTotal: number; // Total notifications received
-  finishLineCrossSecond: number | null; // Second at which finish line was crossed
+  finishLineCrossSecond: number | null; // Time at which finish line was crossed (in seconds, 3 decimal places)
 }
 
 interface AutopilotDecision {
@@ -69,11 +69,11 @@ interface Notification {
   icon?: string;
   timestamp: number;
   seen: boolean;
-  arrivalSecond: number | null; // Second at which notification arrived
-  clickedSecond: number | null; // Second at which notification was clicked
-  reactionTime: number | null; // Difference between clicked and arrival (in seconds)
-  openSessions: Array<{ openTime: number; closeTime: number | null }>; // Track each time notification is opened/closed (in seconds)
-  totalOpenDuration: number; // Total seconds notification has been open (sum of all closed sessions)
+  arrivalSecond: number | null; // Time at which notification arrived (in seconds, 3 decimal places)
+  clickedSecond: number | null; // Time at which notification was clicked (in seconds, 3 decimal places)
+  reactionTime: number | null; // Difference between clicked and arrival (in seconds, 3 decimal places)
+  openSessions: Array<{ openTime: number; closeTime: number | null; mode: string }>; // Track each time notification is opened/closed (in seconds, 3 decimal places), with mode at open time
+  totalOpenDuration: number; // Total seconds notification has been open (sum of all closed sessions, 3 decimal places)
 }
 
 const DrivingSimulator = () => {
@@ -206,8 +206,9 @@ const DrivingSimulator = () => {
   // Track notification open/close times
   useEffect(() => {
     if (selectedNotification && gameStartedRef.current && startTimeRef.current) {
-      // Notification opened - record open time
-      const currentSecond = Math.floor((Date.now() - startTimeRef.current) / 1000);
+      // Notification opened - record open time (with 3 decimal places) and current mode
+      const currentTime = parseFloat(((Date.now() - startTimeRef.current) / 1000).toFixed(3));
+      const currentMode = autopilotRef.current ? labelCondition.toLowerCase() : 'manual';
       setNotifications(prev => {
         const updated = prev.map(n => {
           if (n.id === selectedNotification.id) {
@@ -216,10 +217,10 @@ const DrivingSimulator = () => {
               n.openSessions[n.openSessions.length - 1].closeTime === null;
             
             if (!hasOpenSession) {
-              // Start new open session
+              // Start new open session with current mode
               return {
                 ...n,
-                openSessions: [...n.openSessions, { openTime: currentSecond, closeTime: null }]
+                openSessions: [...n.openSessions, { openTime: currentTime, closeTime: null, mode: currentMode }]
               };
             }
           }
@@ -236,12 +237,12 @@ const DrivingSimulator = () => {
           if (n.openSessions.length > 0) {
             const lastSession = n.openSessions[n.openSessions.length - 1];
             if (lastSession.closeTime === null && gameStartedRef.current && startTimeRef.current) {
-              const currentSecond = Math.floor((Date.now() - startTimeRef.current) / 1000);
-              const sessionDuration = currentSecond - lastSession.openTime;
+              const currentTime = parseFloat(((Date.now() - startTimeRef.current) / 1000).toFixed(3));
+              const sessionDuration = parseFloat((currentTime - lastSession.openTime).toFixed(3));
               const updatedSessions = [...n.openSessions];
               updatedSessions[updatedSessions.length - 1] = {
                 ...lastSession,
-                closeTime: currentSecond
+                closeTime: currentTime
               };
               return {
                 ...n,
@@ -565,7 +566,7 @@ const DrivingSimulator = () => {
           const notifId = shuffledIds[index]; // Use randomized ID order
           
           let notification: Notification;
-          const arrivalSecond = elapsed; // Current elapsed second when notification arrives
+          const arrivalSecond = startTimeRef.current ? parseFloat(((Date.now() - startTimeRef.current) / 1000).toFixed(3)) : null; // Current elapsed time when notification arrives (3 decimal places)
           
           if (notifId === 1) {
             // Text message from John
@@ -1311,9 +1312,9 @@ const DrivingSimulator = () => {
         finishLineCrossed = true;
         finishLineCrossTime = Date.now();
         
-        // Calculate elapsed time in seconds when finish line is crossed
+        // Calculate elapsed time when finish line is crossed (with 3 decimal places)
         const finishLineElapsed = startTimeRef.current && gameStartedRef.current
-          ? Math.floor((Date.now() - startTimeRef.current) / 1000)
+          ? parseFloat(((Date.now() - startTimeRef.current) / 1000).toFixed(3))
           : null;
         simulationDataRef.current.finishLineCrossSecond = finishLineElapsed;
         
@@ -1818,9 +1819,9 @@ const DrivingSimulator = () => {
                 onClick={() => {
                   setSelectedNotification(notif);
                   
-                  // Calculate current elapsed time
+                  // Calculate current elapsed time (with 3 decimal places)
                   const clickedSecond = startTimeRef.current && gameStartedRef.current
-                    ? Math.floor((Date.now() - startTimeRef.current) / 1000)
+                    ? parseFloat(((Date.now() - startTimeRef.current) / 1000).toFixed(3))
                     : null;
                   
                   // Mark as seen and record click time
@@ -1829,7 +1830,7 @@ const DrivingSimulator = () => {
                       if (n.id === notif.id && !n.seen) {
                         // Only update if not already seen (first click)
                         const reactionTime = clickedSecond !== null && n.arrivalSecond !== null
-                          ? clickedSecond - n.arrivalSecond
+                          ? parseFloat((clickedSecond - n.arrivalSecond).toFixed(3))
                           : null;
                         return { 
                           ...n, 
