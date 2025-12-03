@@ -1553,11 +1553,11 @@ const DrivingSimulator = () => {
               fontSize: '16px',
               lineHeight: '1.6'
             }}>
-              <h1 style={{ fontSize: '32px', marginBottom: '27px', color: '#ffd700' }}>
+              <h1 style={{ fontSize: '32px', marginBottom: '20px', color: '#ffd700' }}>
                 🚗 AEON {labelCondition} Simulation 🚗
               </h1>
               <p style={{ marginBottom: '18px' }}>
-                This is a driving simulation. Your goal is to reach the Finish Line and answer all your cell phone messages as quickly and safely as possible.
+                This is a driving simulation. Your goal is to reach the Finish Line and read all your cell phone notifications safely.
               </p>
               <p style={{ marginBottom: '18px' }}>
                 You start in <strong style={{ textDecoration: 'underline' }}>{labelCondition}</strong>. You can switch to manual mode using the "Return to Manual" button. In manual mode, you can navigate using the arrow keys (up, down, left, right). You can also switch back to <strong style={{ textDecoration: 'underline' }}>{labelCondition}</strong> mode from manual mode.
@@ -1566,13 +1566,14 @@ const DrivingSimulator = () => {
                 You start with <strong style={{ color: '#44ff44' }}>1000</strong> points.
               </p>
               <p style={{ marginBottom: '18px' }}>
-                You lose <strong style={{ color: '#ff4444' }}>10 points</strong> per obstacle hit and <strong style={{ color: '#ff4444' }}>5 points</strong> per second that passes. Time will only stop passing once you reach the finish line AND you have answered all your cell phone messages.
+                You lose <strong style={{ color: '#ff4444' }}>10 points</strong> per obstacle hit and <strong style={{ color: '#ff4444' }}>5 points</strong> per second that passes. Time will only stop passing once you reach the finish line AND you have read all your cell phone notifications.
               </p>
               <p style={{ marginBottom: '18px' }}>
-                Each time you receive a cellphone notification, it will appear at the bottom of your screen.
+                Each time you receive a cellphone notification, it will appear at the bottom of your screen. You can open and read these notifications whenever you deem it safe. 
               </p>
-              <p style={{ marginBottom: '23px' }}>
-                To read it, click the icon, read the message, then close the message.
+              <p style={{ marginBottom: '18px' }}> <strong>Important: after the simulation we will ask you questions about what you read in the notifications, so read each notification carefully so that you can remember what it says.</strong></p>
+              <p style={{ marginBottom: '10px' }}>
+                To read a notification, click the icon, read the message, then close the message.
               </p>
               
               <button
