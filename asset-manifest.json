@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/av_simulation_co_manual_notif/static/css/main.fdbcbbd2.css",
-    "main.js": "/av_simulation_co_manual_notif/static/js/main.6f8ffec9.js",
+    "main.js": "/av_simulation_co_manual_notif/static/js/main.46eaa135.js",
     "index.html": "/av_simulation_co_manual_notif/index.html",
     "main.fdbcbbd2.css.map": "/av_simulation_co_manual_notif/static/css/main.fdbcbbd2.css.map",
-    "main.6f8ffec9.js.map": "/av_simulation_co_manual_notif/static/js/main.6f8ffec9.js.map"
+    "main.46eaa135.js.map": "/av_simulation_co_manual_notif/static/js/main.46eaa135.js.map"
   },
   "entrypoints": [
     "static/css/main.fdbcbbd2.css",
-    "static/js/main.6f8ffec9.js"
+    "static/js/main.46eaa135.js"
   ]
 }
