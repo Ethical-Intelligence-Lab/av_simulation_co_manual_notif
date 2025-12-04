@@ -1592,7 +1592,7 @@ const DrivingSimulator = () => {
                 onMouseOver={(e) => e.currentTarget.style.background = '#33ee33'}
                 onMouseOut={(e) => e.currentTarget.style.background = '#44ff44'}
               >
-                START
+                START COPILOT
               </button>
             </div>
           </div>
