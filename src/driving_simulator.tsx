@@ -1557,7 +1557,7 @@ const DrivingSimulator = () => {
                 🚗 AEON {labelCondition} Simulation 🚗
               </h1>
               <p style={{ marginBottom: '18px' }}>
-                This is a driving simulation. Your goal is to reach the Finish Line and read all your cell phone notifications safely.
+                This is a driving simulation. Your goal is to reach the Finish Line and read all your smartphone notifications safely.
               </p>
               <p style={{ marginBottom: '18px' }}>
                 You start in <strong style={{ textDecoration: 'underline' }}>{labelCondition}</strong>. You can switch to manual mode using the "Return to Manual" button. In manual mode, you can navigate using the arrow keys (up, down, left, right). You can also switch back to <strong style={{ textDecoration: 'underline' }}>{labelCondition}</strong> mode from manual mode.
@@ -1566,10 +1566,10 @@ const DrivingSimulator = () => {
                 You start with <strong style={{ color: '#44ff44' }}>1000</strong> points.
               </p>
               <p style={{ marginBottom: '18px' }}>
-                You lose <strong style={{ color: '#ff4444' }}>10 points</strong> per obstacle hit and <strong style={{ color: '#ff4444' }}>5 points</strong> per second that passes. Time will only stop passing once you reach the finish line AND you have read all your cell phone notifications.
+                You lose <strong style={{ color: '#ff4444' }}>10 points</strong> per obstacle hit and <strong style={{ color: '#ff4444' }}>5 points</strong> per second that passes. Time will only stop passing once you reach the finish line AND you have read all your smartphone notifications.
               </p>
               <p style={{ marginBottom: '18px' }}>
-                Each time you receive a cellphone notification, it will appear at the bottom of your screen. You can open and read these notifications whenever you deem it safe. 
+                Each time you receive a smartphone notification, it will appear at the bottom of your screen. You can open and read these notifications whenever you deem it safe. 
               </p>
               <p style={{ marginBottom: '18px' }}> <strong>Important: after the simulation we will ask you questions about what you read in the notifications, so read each notification carefully so that you can remember what it says.</strong></p>
               <p style={{ marginBottom: '10px' }}>
